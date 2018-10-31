@@ -1,0 +1,38 @@
+  - name: "Install git package"
+    yum: name=git state=present
+  - name: "Cloning repo from Github private repo"
+    git:
+      repo: https://github.com/subhamproject/my-vansible.git
+      dest: /tmp/{{ item }}
+      update: no
+    with_items:
+      - my-vansible
+
+  - name: "Backing up git repositories"
+    shell:
+       cmd: |
+        mkdir -p /tmp/backup
+        time=$(date "+%Y-%m-%d")
+        tar cvzf /tmp/backup/{{ item }}-$time.tgz {{ item }}
+       warn: False
+    args:
+       creates: /tmp/backup/{{ item }}-$time.tgz
+    with_items:
+      - my-vansible
+  - name: "Collecting all backup file details"
+    shell: find . -type f -name *.tgz
+    ignore_errors: true
+    no_log: true
+    register: files
+  - name: "Push repositories backup to s3"
+    s3:
+      aws_access_key: "{{ access_key }}"
+      aws_secret_key: "{{ secret_key }}"
+      bucket: "{{ bucket_name }}"
+      mode: put
+      object: /backup/{{ item | basename}}
+      src: /tmp/{{ item }}
+      region: "{{ aws_region }}"
+      overwrite: no
+    with_items:
+       - "{{ files.stdout }}"
