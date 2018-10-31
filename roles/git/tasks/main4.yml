@@ -1,0 +1,43 @@
+  - name: "Install git package"
+    yum: name=git state=present
+  - name: "Cloning repo from Github private repo"
+    git:
+      repo: "{{ item }}"
+      dest: /tmp/{{  item | basename |splitext | first  }}
+      update: no
+    with_items:
+      - 'https://{{ git_id | urlencode }}:{{ git_pass | urlencode }}@github.com/xxxmethods/xxx.git'
+      - 'https://{{ git_id | urlencode }}:{{ git_pass | urlencode }}@github.com/reactor/xxx.git'
+      - 'https://github.com/subhamproject/git-backup-s3.git'
+      - 'https://github.com/subhamproject/selenium-test.git'
+
+  - name: "Creating tarball for all git repositories"
+    shell:
+       cmd: |
+        mkdir -p "{{ playbook_dir }}/backup"
+        time=$(date "+%Y-%m-%d")
+        tar cvzf {{ playbook_dir }}/backup/{{ item }}-$time.tgz {{ item }}
+       warn: False
+    args:
+       creates: "{{ playbook_dir }}/backup/{{ item }}-$time.tgz"
+    with_items:
+       - git-backup-s3
+       - selenium-test
+  - name: "Collecting all backup file details"
+    shell: find "{{ playbook_dir }}" -type f -name *.tgz
+    ignore_errors: true
+    no_log: true
+    register: files
+  - name: "Push repositories backup to s3"
+    local_action:
+       module: s3
+       aws_access_key: "{{ access_key }}"
+       aws_secret_key: "{{ secret_key }}"
+       bucket: "{{ bucket_name }}"
+       mode: put
+       object: /backup/{{ item | basename }}
+       src: "{{ item }}"
+       region: "{{ aws_region }}"
+       overwrite: no
+    with_items:
+       - "{{ files.stdout_lines }}"
