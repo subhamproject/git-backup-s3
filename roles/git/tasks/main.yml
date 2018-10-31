@@ -2,39 +2,42 @@
     yum: name=git state=present
   - name: "Cloning repo from Github private repo"
     git:
-      repo: {{ item }} 
-      dest: /tmp/{{ item | basename | cut -d'.' -f1 }}
+      repo: "{{ item }}"
+      dest: /tmp/{{  item | basename |splitext | first  }}
       update: no
     with_items:
-      - https://github.com/subhamproject/my-vansible.git
-      - https://github.com/subhamproject/Testrepo.git
-      - https://github.com/subhamproject/hari-pom-file.git
+      - 'https://github.com/subhamproject/my-vansible.git'
+      - 'https://github.com/subhamproject/Testrepo.git'
+      - 'https://github.com/subhamproject/hari-pom-file.git'
 
   - name: "Backing up git repositories"
     shell:
        cmd: |
-        mkdir -p /tmp/backup
+        mkdir -p "{{ playbook_dir }}/backup"
         time=$(date "+%Y-%m-%d")
-        tar cvzf /tmp/backup/{{ item }}-$time.tgz {{ item }}
+        tar cvzf {{ playbook_dir }}/backup/{{ item }}-$time.tgz {{ item }}
        warn: False
     args:
-       creates: /tmp/backup/{{ item }}-$time.tgz
+       creates: "{{ playbook_dir }}/backup/{{ item }}-$time.tgz"
     with_items:
       - my-vansible
+      - Testrepo
+      - hari-pom-file
   - name: "Collecting all backup file details"
-    shell: find . -type f -name *.tgz
+    shell: find "{{ playbook_dir }}" -type f -name *.tgz
     ignore_errors: true
     no_log: true
     register: files
   - name: "Push repositories backup to s3"
-    s3:
-      aws_access_key: "{{ access_key }}"
-      aws_secret_key: "{{ secret_key }}"
-      bucket: "{{ bucket_name }}"
-      mode: put
-      object: /backup/{{ item | basename}}
-      src: /tmp/{{ item }}
-      region: "{{ aws_region }}"
-      overwrite: no
+    local_action:
+       module: s3
+       aws_access_key: "{{ access_key }}"
+       aws_secret_key: "{{ secret_key }}"
+       bucket: "{{ bucket_name }}"
+       mode: put
+       object: /backup/{{ item | basename }}
+       src: "{{ item }}"
+       region: "{{ aws_region }}"
+       overwrite: no
     with_items:
-       - "{{ files.stdout }}"
+       - "{{ files.stdout_lines }}"
