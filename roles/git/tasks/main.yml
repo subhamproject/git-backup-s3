@@ -2,11 +2,13 @@
     yum: name=git state=present
   - name: "Cloning repo from Github private repo"
     git:
-      repo: https://github.com/subhamproject/my-vansible.git
-      dest: /tmp/{{ item }}
+      repo: {{ item }} 
+      dest: /tmp/{{ item | basename | cut -d'.' -f1 }}
       update: no
     with_items:
-      - my-vansible
+      - https://github.com/subhamproject/my-vansible.git
+      - https://github.com/subhamproject/Testrepo.git
+      - https://github.com/subhamproject/hari-pom-file.git
 
   - name: "Backing up git repositories"
     shell:
