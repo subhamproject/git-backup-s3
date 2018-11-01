@@ -22,7 +22,7 @@
        cmd: |
         mkdir -p "{{ playbook_dir }}/backup"
         time=$(date "+%Y-%m-%d")
-        tar cvzf {{ playbook_dir }}/backup/{{ item|basename }}-$time.tgz {{ item |basename }}
+        tar cvzf {{ playbook_dir }}/backup/{{ item|basename }}-$time.tgz {{ item }}
        warn: False
     args:
        creates: "{{ playbook_dir }}/backup/{{ item |basename }}-$time.tgz"
