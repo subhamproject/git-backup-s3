@@ -1,0 +1,9 @@
+---
+- hosts: localhost
+  become: true
+  tasks:
+  - name: "Create folder"
+    file: name="{{ item | basename |replace(":", ".")|splitext|first }}" state=directory
+    with_items:
+      - 'https://github.com/subhamproject/git-backup-s3:git'
+      - 'https://github.com/subhamproject/selenium-test:git'
